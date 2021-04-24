@@ -30,9 +30,7 @@ def load_schedule(filepath):
         
         df[lst] = Angle(df[lst], unit=u.hourangle)
         df[time] = pd.to_datetime(df[time])
-        
         t = Time(df[time], location=ATCA)
-        
         df[lst] = t.sidereal_time('apparent')
         
     return df
@@ -80,15 +78,17 @@ def get_AltAz(df,coord, horizon=12*u.deg):
     
     rise_times = ATCA_Obs.target_rise_time(earliest_start[below_horizon], coord, which='next', horizon=horizon).utc.isot.astype('datetime64')
     
-    earliest_start[below_horizon] = rise_times
+    earliest_start.iloc[np.where(below_horizon)] = rise_times
+    
+    
+    df['obs_start'] = earliest_start
     
     latest_end = df['end'].copy()
     below_horizon = altaz_end.alt < horizon
     set_times = ATCA_Obs.target_set_time(latest_end[below_horizon], coord, which='previous', horizon=horizon).utc.isot.astype('datetime64')
     
-    latest_end[below_horizon] = set_times
+    latest_end.iloc[np.where(below_horizon)] = set_times
     
-    df['obs_start'] = earliest_start
     df['obs_end'] = latest_end
     df['obs_length'] = df['obs_end']-df['obs_start']
     
@@ -97,31 +97,35 @@ def get_AltAz(df,coord, horizon=12*u.deg):
     num_obs = len(obs_blocks)
     
     if num_obs > 0:
-        print(obs_blocks)
+        print(obs_blocks[['obs_start','obs_length']])
         
         return True
         
     return False
 
 
-def analyse_sources():
-    sources = pd.read_csv('sources.csv')#, encoding = "ISO-8859-1")
+def analyse_sources(filename, sched_filepath=None, semester=None):
+    sources = pd.read_csv(filename)#, encoding = "ISO-8859-1")
     
     print(sources)
-    sc = SkyCoord(sources['ra'],sources['dec'], unit=u.deg)
+    units = (u.deg, u.deg)
+    if ':' in sources['ra']:
+        units = (u.hourangle, u.deg)
+    sc = SkyCoord(sources['ra'],sources['dec'], unit=units)
     
-    sched_filepath = get_schedule('2019Oct')
+    if sched_filepath is None:
+        sched_filepath = get_schedule(semester)
     full_schedule = load_schedule(sched_filepath)
     good_schedule = apply_obs_constraints(full_schedule)
     
     num_observable = 0
     for i,coord in enumerate(sc):
         print(sources['name'].iloc[i])
-        observable =get_AltAz(good_schedule,coord)
+        observable = get_AltAz(good_schedule,coord)
         print()
         
         num_observable += observable
     print(num_observable)
         
-        
-analyse_sources()
+get_schedule('2021Apr')
+analyse_sources('grb171205a.csv', semester='2020Apr')
