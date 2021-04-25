@@ -78,7 +78,7 @@ def get_AltAz(df,coord, horizon=12*u.deg):
     
     rise_times = ATCA_Obs.target_rise_time(earliest_start[below_horizon], coord, which='next', horizon=horizon).utc.isot.astype('datetime64')
     
-    earliest_start.iloc[np.where(below_horizon)] = rise_times
+    earliest_start.iloc[np.where(below_horizon)] = pd.to_datetime(rise_times, utc=True)
     
     
     df['obs_start'] = earliest_start
@@ -87,7 +87,7 @@ def get_AltAz(df,coord, horizon=12*u.deg):
     below_horizon = altaz_end.alt < horizon
     set_times = ATCA_Obs.target_set_time(latest_end[below_horizon], coord, which='previous', horizon=horizon).utc.isot.astype('datetime64')
     
-    latest_end.iloc[np.where(below_horizon)] = set_times
+    latest_end.iloc[np.where(below_horizon)] = pd.to_datetime(set_times, utc=True)
     
     df['obs_end'] = latest_end
     df['obs_length'] = df['obs_end']-df['obs_start']
@@ -125,7 +125,7 @@ def analyse_sources(filename, sched_filepath=None, semester=None):
         print()
         
         num_observable += observable
-    print(num_observable)
+    print('{} sources are observable'.format(num_observable))
         
 get_schedule('2021Apr')
-analyse_sources('grb171205a.csv', semester='2020Apr')
+analyse_sources('sn2012dy.csv', semester='2020Apr')
